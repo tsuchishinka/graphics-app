@@ -1,7 +1,10 @@
 <html>
   <script>
+    const MS_PER_UPDATE = 62.5
+    const MAX_GUN_COUNT = 2
     class CanvasHandler {
       objects = []
+      previousTime = 0
 
       constructor(canvas) {
         this.canvas = canvas
@@ -9,19 +12,13 @@
         window.addEventListener('keydown', this.onKeyDown)
         this.canvas.addEventListener('mousemove', this.onMouseMove)
         this.canvas.addEventListener('mousedown', this.onMouseDown)
+        this.previsousTime = Date.now()
       }
 
       onKeyDown = (e) => {
+        // プレイヤーの戦車の操作
         const player = this.objects.find(obj => obj instanceof Player)
-        if (e.code === 'Space') {
-          const bullet = new Bullet({
-            posX: player.getShootPos().x,
-            posY: player.getShootPos().y,    
-            angle: player.gunAngle,
-            shooter: 'player'
-          })
-          this.addObject(bullet)
-        } if (e.code == 'ArrowDown') {
+        if (e.code == 'ArrowDown') {
           player.posY += 5
         } if (e.code == 'ArrowUp') {
           player.posY -= 5
@@ -33,10 +30,15 @@
       }
 
       onMouseDown = (e) => {
+        const bullets = this.objects.filter(obj => obj instanceof Bullet)
+        console.log(bullets.length)
+        if (bullets.length >= MAX_GUN_COUNT) {
+          return
+        }
         const player = this.objects.find(obj => obj instanceof Player)
         const bullet = new Bullet({
-          posX: player.getShootPos().x,
-          posY: player.getShootPos().y,    
+          posX: player.getGunOutPosition().x,
+          posY: player.getGunOutPosition().y,    
           angle: player.gunAngle,
           shooter: 'player'
         })
@@ -48,23 +50,59 @@
         const mouseX = e.clientX - rect.left
         const mouseY = e.clientY - rect.top
         const player = this.objects.find(obj => obj instanceof Player)
-        player.changeGunAngle(
-          {x: player.posX + 13, y: player.posY + 13},
-          {x: mouseX, y: mouseY}
+        player.changeGunDirection(
+          {
+            x: mouseX - player.gunAxis.x,
+            y: mouseY - player.gunAxis.y
+          }
         )
-
       }
 
       addObject(obj) {
         this.objects.push(obj)
       }
 
-      draw = () => {
+      play = () => {
+        const loop = () => {
+          const currentTime = Date.now()
+          let deltaTime = currentTime - this.previsousTime
+          if (deltaTime < MS_PER_UPDATE) {
+            requestAnimationFrame(loop)
+            return
+          } else {
+            while (deltaTime >= MS_PER_UPDATE) {
+              this.update()
+              deltaTime -= MS_PER_UPDATE
+            }
+          }
+          this.previsousTime = currentTime - deltaTime
+          this.draw()
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+      }
+
+      update() {
+        this.objects = this.objects.filter(obj => {
+          if (obj instanceof Bullet) {
+            if (obj.posX < 0 || obj.posX > this.canvas.width ||
+                obj.posY < 0 || obj.posY > this.canvas.height) {
+              return false
+            }
+          }
+          return true
+        })
+
+        this.objects.forEach(obj => {
+          obj.update()
+        })
+      }
+
+      draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
         this.objects.forEach(obj => {
           obj.draw(this.ctx)
         })
-        requestAnimationFrame(this.draw)
       }
     }
 
@@ -87,6 +125,12 @@
         this.velX = velX || 0
         this.velY = velY || 0
         this.angle = angle || 0
+        this.id = Math.random().toString(36).substring(2, 15)
+      }
+
+      update() {
+        this.posX += this.velX
+        this.posY += this.velY
       }
 
       draw(ctx) {}
@@ -95,6 +139,7 @@
     class Bullet extends GameObject {
       color = 'black'
       shooter = 'player' | 'enemy'
+      id = null
 
       constructor({
         posX,
@@ -107,22 +152,14 @@
         super({
           posX,
           posY,
-          velX: 0.02  * Math.cos(angle) + (velX || 0),
-          velY: 0.02 * Math.sin(angle) + (velY || 0),
+          velX: 20  * Math.cos(angle) + (velX || 0),
+          velY: 20 * Math.sin(angle) + (velY || 0),
           angle
         })
         this.shooter = shooter
-        this.startTime = Date.now()
-      }
-
-      updatePosition(currentTime) {
-        const elapsed = currentTime - this.startTime
-        this.posX += this.velX * elapsed
-        this.posY += this.velY * elapsed
       }
 
       draw(ctx) {
-        this.updatePosition(Date.now())
         ctx.fillStyle = this.color
         ctx.beginPath()
         ctx.arc(this.posX, this.posY, 5, 0, 2 * Math.PI)
@@ -137,12 +174,14 @@
 
     class Tank extends GameObject {
       color = 'green'
-      gunAngle = 0
       width = TANK_WIDTH
       height = TANK_HEIGHT
+      type = 'player' | 'enemy' | null
 
       gunWidth = GUN_WIDTH
       gunLength = GUN_LENGTH
+      gunDirectionX = 0
+      gunDirectionY = 0
 
       constructor({
         posX,
@@ -156,8 +195,18 @@
         this.color = color
       }
 
+      get gunAxis() {
+        return {
+          x: this.width / 2 + this.posX,
+          y: this.height / 2 + this.posY
+        }
+      }
+
+      get gunAngle() {
+        return Math.atan2(this.gunDirectionY, this.gunDirectionX)
+      }
+
       draw(ctx) {
-        console.log('Drawing tank at', this.posX, this.posY)
         ctx.fillStyle = this.color
         ctx.strokeStyle = 'black'
         ctx.lineWidth = 2
@@ -165,10 +214,7 @@
         
         ctx.fillRect(this.posX, this.posY, this.width, this.height)
         
-        const g0 = {
-          x: this.width / 2 + this.posX,
-          y: this.height / 2 + this.posY
-        }
+        const g0 = this.gunAxis
         const angle = this.gunAngle
         const g1 = {
           x: g0.x - this.gunWidth / 2 * Math.sin(angle),
@@ -195,13 +241,13 @@
         ctx.fill()
       }
 
-      changeGunAngle(tankPos, targetPos) {
-        const deltaX = targetPos.x - tankPos.x
-        const deltaY = targetPos.y - tankPos.y
-        this.gunAngle = Math.atan2(deltaY, deltaX)
+      // 砲台の向きを変更する
+      changeGunDirection({ x, y }) {
+        this.gunDirectionX = x
+        this.gunDirectionY = y
       }
 
-      getShootPos() {
+      getGunOutPosition() {
         return {
           x: this.width / 2 + this.posX + this.gunLength * Math.cos(this.gunAngle),
           y: this.height / 2 + this.posY + this.gunLength * Math.sin(this.gunAngle)
@@ -210,13 +256,11 @@
     }
 
     class Player extends Tank {
-      poseAngle = 0
       constructor(posX, posY) {
         super({posX, posY, angle: Math.PI * 1 / 4} )
         this.color = 'blue'
+        this.type = 'player'
       }
-
-      
 
       draw(ctx) {
         super.draw(ctx)
@@ -226,7 +270,8 @@
     class Enemy extends Tank {
       constructor(posX, posY) {
         super({posX, posY} )
-        this.color = 'red'
+        this.color = 'gray'
+        this.type = 'enemy'
       }
 
       draw = (ctx) => {
@@ -239,19 +284,17 @@
       height = 0
 
       constructor({
-        x,
-        y,
         width,
         height
       }) {
-        super({x, y})
+        super({posX: 0, posY: 0})
         this.width = width
         this.height = height
       }
 
       draw(ctx) {
-        ctx.fillStyle = 'grey'
-        ctx.fillRect(this.posX, this.posY, this.width, this.height)
+        ctx.strokeStyle = 'rgb(0, 0, 0)'
+        ctx.strokeRect(this.posX, this.posY, this.width, this.height)
       }
     }
 
@@ -268,12 +311,15 @@
         width: canvas.width,
         height: canvas.height
       })
-      const player = new Player(50, 50)
-      const enemy = new Enemy(400, 400)
+      canvasHandler.addObject(stage)
 
+      const player = new Player(50, 50)
       canvasHandler.addObject(player)
+
+      const enemy = new Enemy(400, 400)
       canvasHandler.addObject(enemy)
-      canvasHandler.draw()
+
+      canvasHandler.play()
     }
       
   </script>
