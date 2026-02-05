@@ -1,0 +1,116 @@
+<html>
+  <script>
+    const CANVAS_WIDTH = 1600
+    const CANVAS_HEIGHT = 800
+    const MAX_LEVEL = 17
+    const tileSerialLengthList = getTileSerialLengthList()
+    let worldBase = { x: 0, y: 0 }
+    let zoom = 5
+    let isMouseDown = false
+    let imageCache = [{ img: new HTMLImageElement(), tileSerial: '' }]
+
+    
+    async function init() {
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+    
+      const originPos = getCanvasOriginTilePos()
+      const currentLevel = getTileLevel()
+      let tiles = createTiles(originPos)
+      await updateImageCache(tiles)
+      drawTiles(tiles)
+
+      canvas.addEventListener('mousedown', () => {
+        isMouseDown = true
+      }) 
+    }
+
+    async function updateImageCache(tiles) {
+      const noFetchedImgs = []
+      const tileSerials = tiles.map((tile) => tile.serial)
+      for (const tile of tiles) {
+        // tileのシリアルからimageCacheに画像があるのかどうかを判定し、ある場合はキャンバスで描画し、ない場合はnoFetchedImgsにpushする
+      }
+
+      for (const noImg of noFetchedImgs) {
+        // 画像をWebから取得し、imageCacheに保存する
+      }
+    }
+
+    function drawTiles(tiles) {
+      const noFetchedImgs = []
+      for (const tile of tiles) {
+        // tileのシリアルからimageCacheに画像があるのかどうかを判定し、ある場合はキャンバスで描画し、ない場合はcontinue
+      }
+    }
+
+    function getTileLength() {
+
+    }
+
+    function getTileLevel() {
+      return Math.floor(zoom)
+    }
+
+    function getCanvasOriginTilePos() {
+      return { x: 0, y: 0 }
+    }
+
+    function createTiles(originPos) {
+      const tileLength = getTileLength()
+      const columnNum = Math.floor((CANVAS_WIDTH - originPos.x) / tileLength)
+      const rowNum = Math.floor((CANVAS_HEIGHT - originPos.y) / tileLength)
+      const tiles = []
+      for (let i = 0; i < rowNum; i++) {
+        for (let j = 0; j < columnNum; j++) {
+          const x = originPos.x + j * tileLength
+          const y = originPos.y + i * tileLength
+          tiles.push({ pos: { x, y }, serial: calcTileSerialFromPos(x, y) })
+        }
+      }
+
+      return tiles
+    }
+
+    function calcTileXYZFromSerial(serial) {
+      const z = tileSerialLengthList.findIndex((serialLength) => serialLength === serial.length)
+      if (z === -1) {
+        throw new Error('tile srial length list is error')
+      }
+      const currentLevelSerial = Number(serial.slice(serial.length - 1 - tileSerialLengthList[z]))
+      const x = currentLevelSerial % Math.pow(2, z * 2)
+      const y = Math.floor(currentLevelSerial / Math.pow(2, z * 2))
+      return { x, y, z }
+    }
+
+    function calcTileSerialFromPos(x, y) {
+      const tileXYZ = calcTileXYZFromPos(x, y)
+
+    }
+
+    function calcTileXYZFromPos(x, y) {
+      const worldX = x - worldBase.x
+      const worldY = y - worldBase.y
+      const tileLength = getTileLength()
+      const x = Math.floor(worldX / tileLength)
+      const y = Math.floor(worldY / tileLength)
+      return { 
+        x,
+        y,
+        z: getTileLevel()
+      }
+    }
+
+    function getTileSerialLengthList() {
+      const tileSerialLengthList = []
+      for (let i = 0; i < MAX_LEVEL; i++) {
+        tileSerialLengthList.push(Math.pow(2, i * 2).toString().length)
+      }
+      return tileSerialLengthList
+    }
+  </script>
+  <body onload="init()">
+    <canvas id="canvas" />
+  </body>
+</html>
