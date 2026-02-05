@@ -5,6 +5,12 @@ class InputComponent {
       x: 0,
       y: 0,
     }
+    this.prevMousePos = {
+      x: 0,
+      y: 0,
+    }
+    this.prevWheel = 0
+    this.wheel = 0
     this.keyCodes = new Set()
     const canvas = gameApp.getCanvas()
     canvas.addEventListener("keydown", this.handleKeyDown)
@@ -12,6 +18,12 @@ class InputComponent {
     canvas.addEventListener("mousemove", this.handleMouseMove)
     canvas.addEventListener("mouseup", this.handleMouseUp)
     canvas.addEventListener("keyup", this.handleKeyUp)
+    canvas.addEventListener("wheel", this.handleWheel)
+  }
+
+  handleWheel = (e) => {
+    this.prevWheel = this.wheel
+    this.wheel += e.deltaY
   }
 
   handleKeyDown = (e) => {
@@ -23,10 +35,12 @@ class InputComponent {
   }
 
   handleMouseMove = (e) => {
+    this.prevMousePos = { ...this.mousePos }
     this.mousePos = {
       x: e.offsetX,
       y: e.offsetY,
     }
+
   }
 
   handleMouseUp = (e) => {

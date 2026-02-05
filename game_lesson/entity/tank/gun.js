@@ -41,7 +41,7 @@ class Gun {
     ctx.fill()
   }
 
-  rorate(targetPos) {
+  aimAt(targetPos) {
     const deltaX = targetPos.x - this.basePos.x
     const deltaY = targetPos.y - this.basePoss.y
     this.gunAngle = Math.atan2(deltaY, deltaX)

@@ -6,6 +6,8 @@ class Tank extends GameObject {
   gunAngle = 0
   width = TANK_WIDTH
   height = TANK_HEIGHT
+  gun = new Gun({x: this.posX + this.width / 2, y: this.posY + this.height / 2})
+  controller = new TankController()
 
   gunWidth = GUN_WIDTH
   gunLength = GUN_LENGTH
@@ -40,6 +42,10 @@ class Tank extends GameObject {
       x: this.width / 2 + this.posX + this.gunLength * Math.cos(this.gunAngle),
       y: this.height / 2 + this.posY + this.gunLength * Math.sin(this.gunAngle)
     }
+  }
+
+  update(dt, world) {
+    this.controller.update(dt, world, this)
   }
 }
 

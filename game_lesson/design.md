@@ -1,5 +1,4 @@
-```mermaid
-        classDiagram
+    classDiagram
     %% GameApp.tick → world.tick
     class GameApp {
         world: World
@@ -67,29 +66,34 @@
 
     %% GameObjectの管理、衝突判定を行う
     class World {
-        -detector: Detector
+        -detector: CollisionDetector
         -children: GameObject[]
         constructor()
         +addChild(child)
         +removeChild(child)
         +getChildren(): GameObject[]
         +update(dt)
+        +getCollitionResults(): CollisionResult[]
     }
 
 
-    class Detector {
+    class CollisionDetector {
+        results: CollisionResult[]
         +constructor()
-        +collisions(objects)
+        +calcCollisions(objects)
+        +getResults(): CollisionResult[]
     }
 
 
     class GameObject {
         posX: number
         posY: number
+        posZ: number
         velX: number
         velY: number
         angle: number
-        overlapable: boolean
+        width: number
+        heigit: number
         +constructor(config)
         +update(dt, world)
         +render(ctx)
@@ -106,21 +110,10 @@
         +render(ctx)
     }
 
-    class Bomb {
-        setterId: string
-        -color: string
-        -createAt: Date
-        -timeLimit: number
-        +constructor(config)
-        +isExploded(): boolean
-    }
-
 
     class Tank {
         id: string
         color: string
-        width: number
-        height: number
         gun: Gun
         controller: Controller
         +constructor(config)
@@ -138,7 +131,7 @@
         +length: number
         +basePos: Position
         +constuctor()
-        +rotate(targetPos)
+        +aimAt(targetPos)
         +shoot(): Bullet
         +render(ctx)
     }
@@ -189,7 +182,6 @@
     GameObject <|-- Tank
     GameObject <|-- Wall
     GameObject <|-- Obstacle
-    GameObject <|-- Bomb
     Tank <|-- Player
     Tank <|-- Enemy
     State <|-- StartState
@@ -207,10 +199,9 @@
     GameApp ..> InputComponent: 参照・操作
     GameApp ..> GameLoopComponent: 参照・操作
     GameApp ..> RenderComponent: 参照・操作
-    World ..> Detector: 生成・参照・操作
+    World ..> CollisionDetector: 生成・参照・操作
     World ..> Stage: 生成・参照・操作
     Tank ..> Gun : 生成・参照・操作
     Tank ..> Controller: 生成・参照・操作
     PlayerController ..> InputComponent: 参照
     Gun ..> Bullet : 生成
-```
