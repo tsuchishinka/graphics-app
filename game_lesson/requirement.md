@@ -1,0 +1,3 @@
+- BulletはBulletに当たるとどちらも消える
+- TankはBulletに当たると破壊される
+- TankはBombに当たると破壊される
